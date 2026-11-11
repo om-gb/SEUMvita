@@ -1,0 +1,15 @@
+# Build output
+build/
+*.vpk
+*.self
+*.velf
+eboot.bin
+
+# On-console bundle: contains Sony-derived DevKit modules. Never commit.
+vita-deploy/
+vita-deploy.zip
+*.skprx
+*.suprx
+
+# Game data dropped in for porting (copyrighted; keep local)
+gamedata/
