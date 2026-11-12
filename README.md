@@ -30,6 +30,19 @@ See [docs/PORTING_PLAN.md](docs/PORTING_PLAN.md). The numbers in it come from
 `tools/asset_inventory.py` and `tools/level_budget.py` (`pip install UnityPy`,
 then run each with `gamedata/Seum_Data` as the argument).
 
+## Converting the game data (milestone 1)
+
+```bash
+pip install UnityPy TypeTreeGeneratorAPI etcpak   # plus ffmpeg on PATH
+python3 tools/export/export.py gamedata/Seum_Data gamedata/vita
+python3 tools/export/validate.py gamedata/vita --budget gamedata/level_budget.txt
+```
+
+This takes about 3.5 minutes on 4 cores the first time and about 1.5 minutes
+after that, because textures and audio are cached. Output format:
+[docs/DATA_FORMAT.md](docs/DATA_FORMAT.md). `tools/export/check_scripts.py`
+checks that every gameplay object reads byte-exact.
+
 ## Sample
 
 `samples/hello-vitagl` is a smoke test (SDL2 input + vitaGL clear loop, title ID `SEUM00001`, built with `-na` so the profilers can map symbols):

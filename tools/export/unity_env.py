@@ -7,15 +7,25 @@ from UnityPy.helpers.TypeTreeGenerator import TypeTreeGenerator
 UNITY_VERSION = "2018.3.7f1"
 
 
+ALIGN = 0x4000
+
 class FixedTypeTreeGenerator(TypeTreeGenerator):
-    """TypeTreeGeneratorAPI puts the 4-byte align flag on m_GameObject instead
-    of m_Enabled, shifting every field after it by 3 bytes. Move it."""
+    """Fixes for TypeTreeGeneratorAPI output on this game:
+    - the 4-byte align flag sits on m_GameObject instead of m_Enabled, which
+      shifts every field after it by 3 bytes;
+    - string[] / List<string> fields come out typed "string" instead of
+      "vector", so the reader decodes the array as one string."""
 
     def get_nodes(self, assembly, fullname):
-        nodes = super().get_nodes(assembly, fullname)
+        nodes = list(super().get_nodes(assembly, fullname))
         for n in nodes:
             if n.m_Level == 1 and n.m_Name == "m_Enabled":
-                n.m_MetaFlag |= 0x4000
+                n.m_MetaFlag |= ALIGN
+        for i, n in enumerate(nodes[:-3]):
+            # string -> Array -> size, data(string)  means an array of strings
+            if (n.m_Type == "string" and nodes[i + 1].m_Type == "Array"
+                    and nodes[i + 3].m_Level == n.m_Level + 2 and nodes[i + 3].m_Type == "string"):
+                n.m_Type = "vector"
         return nodes
 
 

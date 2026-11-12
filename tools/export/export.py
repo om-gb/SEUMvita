@@ -486,20 +486,35 @@ def main():
         log(f"prefabs: {len(manifest['prefabs'])}")
 
         # Standalone Resources textures and sprites (menu/HUD art loaded by path)
-        ui = {}
+        # The ResourceManager lists every dependency of an asset under that
+        # asset's path, so only an object whose name matches the last path
+        # component is the thing Resources.Load(path) actually returns.
+        res = {}
         for path, ptrs in world.resources.items():
+            leaf = path.rsplit("/", 1)[-1]
             for fname, pid in ptrs:
                 o = world.files[fname].objects.get(pid)
-                if o is not None and o.type.name == "Texture2D":
-                    ui[path] = cat.texture(o)
-                elif o is not None and o.type.name == "Sprite":
-                    ui.setdefault(path, cat.sprite(o))
-                elif o is not None and o.type.name == "AudioClip":
+                if o is None or o.type.name not in ("Texture2D", "Sprite", "AudioClip"):
+                    continue
+                try:
+                    name = o.read_typetree().get("m_Name", "")
+                except Exception:
+                    continue
+                if name.lower() != leaf:
+                    continue
+                if o.type.name == "Texture2D":
+                    res[path] = cat.texture(o)
+                elif o.type.name == "Sprite":
+                    res.setdefault(path, cat.sprite(o))
+                else:
                     manifest.setdefault("resourceAudio", {})[path] = cat.audio(o)
-        manifest["resourceTextures"] = ui
+        manifest["resourceTextures"] = res
 
     if not a.no_textures:
-        ui_ids = {t for t in manifest.get("resourceTextures", {}).values() if t in cat.textures}
+        # Menu/HUD art lives in the game's "<Screen>Psd/" folders: keep it
+        # uncompressed so text stays sharp. Everything else is DXT.
+        ui_ids = {t for p, t in manifest.get("resourceTextures", {}).items()
+                  if t in cat.textures and "psd/" in p}
         manifest["textures"] = textures.export_all(cat.textures, a.out_dir, a.jobs, log, ui_ids)
     manifest["sprites"] = cat.sprites
     if not a.no_audio:

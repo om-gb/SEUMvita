@@ -38,7 +38,7 @@ def check_dds(path, info):
 def walk_refs(v, out):
     if isinstance(v, dict):
         for k in ("obj", "mesh", "mat", "tex", "audio", "sprite", "prefab"):
-            if k in v and not isinstance(v[k], (dict, list)):
+            if k in v and v[k] is not None and not isinstance(v[k], (dict, list)):
                 out[k].append(v[k])
         if v.get("missing"):
             out["missing"].append(1)

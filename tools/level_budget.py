@@ -12,10 +12,11 @@ def walk(go, acc, seen):
     seen.add(key)
     for comp in go.m_Component:
         ptr = comp.component if hasattr(comp, "component") else comp[1]
+        try: t = ptr.deref().type.name
+        except Exception: continue
+        acc["comp"][t] += 1          # count before reading: script objects have no type tree
         try: c = ptr.read()
         except Exception: continue
-        t = c.object_reader.type.name
-        acc["comp"][t] += 1
         if t == "MeshFilter" and c.m_Mesh:
             try:
                 m = c.m_Mesh.read()

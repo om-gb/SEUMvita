@@ -84,7 +84,13 @@ def _jobs(textures, out_dir, ui_ids, table, log):
                 continue
             table[tid] = meta
             if os.path.exists(dst):
-                table[tid]["cached"] = True
+                with open(dst, "rb") as f:
+                    hdr = f.read(128)
+                th, tw, mips = struct.unpack_from("<II", hdr, 12) + struct.unpack_from("<I", hdr, 28)
+                cc = hdr[84:88]
+                fmt = cc.decode() if cc in (b"DXT1", b"DXT5") else "RGBA8"
+                table[tid].update(w=tw, h=th, fmt=fmt, mips=max(1, mips), alpha=fmt != "DXT1",
+                                  srcW=d.m_Width, srcH=d.m_Height, cached=True)
                 continue
             img = d.image
         except Exception as e:
