@@ -24,6 +24,12 @@ Known toolchain quirks handled by the script:
 - vita-agent-use is built `MinSizeRel`: with `Release`, `vita-elf-create` fails on `vita_agent_shell` ("segment 1 overlaps").
 - vitaGL now needs `stdc++` and `pthread` at link time.
 
+## Porting plan
+
+See [docs/PORTING_PLAN.md](docs/PORTING_PLAN.md). The numbers in it come from
+`tools/asset_inventory.py` and `tools/level_budget.py` (`pip install UnityPy`,
+then run each with `gamedata/Seum_Data` as the argument).
+
 ## Sample
 
 `samples/hello-vitagl` is a smoke test (SDL2 input + vitaGL clear loop, title ID `SEUM00001`, built with `-na` so the profilers can map symbols):
