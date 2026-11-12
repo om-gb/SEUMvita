@@ -108,7 +108,7 @@ Every submesh is converted to triangle lists.
 
 ## Textures
 
-These are standard DDS files. DXT1 is used when the image is opaque and DXT5
+These are standard DDS files with **rows stored bottom-up**: the first row is v = 0, as GL and Unity UVs expect. DXT1 is used when the image is opaque and DXT5
 when it has alpha; both have a full mip chain down to 4×4. Every texture is
 halved when it's over 64 px and capped at 1024 px. UI art loaded through
 `resourceTextures` is RGBA8 without mips, halved to fit 960×544, so menu text

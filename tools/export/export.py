@@ -116,7 +116,8 @@ class PrefabExporter:
 
     # ---- hierarchy -------------------------------------------------------
     def export(self, root):
-        self._collect(root, -1)
+        for r in (root if isinstance(root, list) else [root]):
+            self._collect(r, -1)
         for i, (o, go, tr) in enumerate(self._pending):
             self.objects[i]["components"] = [c for c in (self._component(o, i, ptr) for ptr in self._comp_ptrs(go)) if c]
         return dict(objects=self.objects, materials=self.materials, meshCount=len(self.meshes.meshes))
@@ -423,6 +424,41 @@ def export_prefab(world, cat, path, out_base, log):
     return data
 
 
+def export_scene(world, cat, scene_file, out_base, log):
+    """Export every root GameObject of a scene file, plus its RenderSettings."""
+    f = world.files[scene_file]
+    roots, rs = [], None
+    for o in f.objects.values():
+        if o.type.name == "GameObject":
+            tr = world.transform_of(o, o.read_typetree())
+            if tr is not None and not tr["m_Father"]["m_PathID"]:
+                roots.append(o)
+        elif o.type.name == "RenderSettings":
+            t = o.read_typetree()
+            rs = {"fog": bool(t["m_Fog"]), "fogMode": t["m_FogMode"], "fogColor": col(t["m_FogColor"]),
+                  "fogDensity": t["m_FogDensity"], "fogStart": t["m_LinearFogStart"], "fogEnd": t["m_LinearFogEnd"],
+                  "ambientMode": t["m_AmbientMode"], "ambientSky": col(t["m_AmbientSkyColor"]),
+                  "ambientEquator": col(t["m_AmbientEquatorColor"]), "ambientGround": col(t["m_AmbientGroundColor"]),
+                  "ambientIntensity": t.get("m_AmbientIntensity", 1.0)}
+    roots.sort(key=lambda o: o.path_id)
+    ex = PrefabExporter(world, cat)
+    data = ex.export(roots)
+    data.update(format=FORMAT_VERSION, source=scene_file, renderSettings=rs, stats=dict(ex.stats), warnings=dict(ex.warnings))
+    os.makedirs(os.path.dirname(out_base), exist_ok=True)
+    ex.meshes.write(out_base + ".smsh")
+    with open(out_base + ".json", "w") as fo:
+        json.dump(data, fo, separators=(",", ":"))
+    log(f"scene {scene_file}: {len(data['objects'])} objects, renderSettings={rs is not None}")
+    return data
+
+
+def export_resource_material(world, cat, o):
+    """A standalone material (e.g. Environment/Materials/SkyboxHell1)."""
+    ex = PrefabExporter(world, cat)
+    ex.material(o)
+    return ex.materials[0]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("data_dir"); ap.add_argument("out_dir")
@@ -509,6 +545,28 @@ def main():
                 else:
                     manifest.setdefault("resourceAudio", {})[path] = cat.audio(o)
         manifest["resourceTextures"] = res
+
+        # Standalone materials loaded by path (skyboxes, level material swaps)
+        mats = {}
+        for path, ptrs in world.resources.items():
+            leaf = path.rsplit("/", 1)[-1]
+            for fname, pid in ptrs:
+                o = world.files[fname].objects.get(pid)
+                if o is not None and o.type.name == "Material" and o.read_typetree()["m_Name"].lower() == leaf:
+                    mats[path] = export_resource_material(world, cat, o)
+        manifest["resourceMaterials"] = mats
+        log(f"resource materials: {len(mats)}")
+
+        # The gameplay scene: its lights, cameras and RenderSettings (ambient, fog)
+        scenes = {}
+        for o in world.files["globalgamemanagers"].objects.values():
+            if o.type.name == "BuildSettings":
+                for i, sp in enumerate(o.read_typetree()["scenes"]):
+                    scenes[os.path.splitext(os.path.basename(sp))[0]] = f"level{i}"
+        manifest["scenes"] = scenes
+        for name in ("Game",):
+            if scenes.get(name) in world.files:
+                export_scene(world, cat, scenes[name], os.path.join(a.out_dir, "scenes", name.lower()), log)
 
     if not a.no_textures:
         # Menu/HUD art lives in the game's "<Screen>Psd/" folders: keep it

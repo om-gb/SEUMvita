@@ -43,6 +43,28 @@ after that, because textures and audio are cached. Output format:
 [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md). `tools/export/check_scripts.py`
 checks that every gameplay object reads byte-exact.
 
+## Engine: level viewer (milestone 2)
+
+`engine/` is one C++ code base for Linux (SDL2 + desktop GL) and Vita (vitaGL
++ SDL2). It assembles a level the way `Game.changeLevel` does: the Game
+scene's lights and ambient light, the level at its `LevelMetadata` position,
+the zone's environment prefab, the skybox, and up to 4 point lights per object.
+
+```bash
+python3 tools/gen_levelmeta.py gamedata/decompiled/Assembly-CSharp gamedata/vita/levelmeta.json
+cmake -S engine -B build/linux && cmake --build build/linux
+./build/linux/seum --data gamedata/vita --level 1          # WASD + mouse, N/P = next/prev level
+xvfb-run -a ./build/linux/seum --data gamedata/vita --level 1 --screenshot shot.tga --hidden
+cmake -S engine -B build/vita -DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake && cmake --build build/vita
+python3 tools/make_pack.py gamedata/vita gamedata/vita-testpack --levels 1,9,61 --zip
+```
+
+On the Vita, the data goes in `ux0:data/seum/`. vitaGL compiles its shaders
+at runtime, so the console needs `ur0:data/libshacccg.suprx`.
+
+Controls on the Vita: left stick to move, right stick to look, L/R to go
+down/up, Cross for speed, Triangle/Square for next/previous level, Start to quit.
+
 ## Sample
 
 `samples/hello-vitagl` is a smoke test (SDL2 input + vitaGL clear loop, title ID `SEUM00001`, built with `-na` so the profilers can map symbols):

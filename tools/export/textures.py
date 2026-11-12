@@ -41,7 +41,9 @@ def target_size(w, h):
 def _encode(job):
     tid, w, h, mode, raw, ui, dst = job
     try:
-        img = Image.frombytes(mode, (w, h), raw).convert("RGBA")
+        # UnityPy hands images over top row first; GL and Unity UVs put v=0 at
+        # the bottom row, so store rows bottom-up and the engine can use UVs as-is.
+        img = Image.frombytes(mode, (w, h), raw).convert("RGBA").transpose(Image.FLIP_TOP_BOTTOM)
         alpha = img.getchannel("A").getextrema()[0] < 250
         tw, th = target_size(w, h)
         if ui:
