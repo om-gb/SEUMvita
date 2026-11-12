@@ -13,3 +13,7 @@ vita-deploy.zip
 
 # Game data dropped in for porting (copyrighted; keep local)
 gamedata/
+
+# Python
+__pycache__/
+*.pyc
