@@ -409,7 +409,10 @@ def export_prefab(world, cat, path, out_base, log):
     if not roots:
         return None
     if len(roots) > 1:
-        log(f"  {path}: {len(roots)} roots, using first")
+        # A prefab and its source model can share a Resources path. The game
+        # wants the prefab, which is the one with colliders/scripts attached.
+        roots.sort(key=lambda o: -len(o.read_typetree()["m_Component"]))
+        log(f"  {path}: {len(roots)} roots, using the one with most components")
     ex = PrefabExporter(world, cat)
     data = ex.export(roots[0])
     data.update(format=FORMAT_VERSION, source=path, stats=dict(ex.stats), warnings=dict(ex.warnings))
